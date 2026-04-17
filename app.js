@@ -16,7 +16,7 @@ if (!firebase.apps.length) {
 }
 const db = firebase.database();
 
-// Game State (Local)
+// Game State (Local Settings)
 const gameState = {
     lang: 'ar',
     theme: 'dark',
@@ -24,11 +24,22 @@ const gameState = {
 };
 
 // Multiplayer State (Synced)
+let isMultiplayer = false;
 let myPlayerId = null;
 let currentRoomCode = null;
 let roomRef = null;
 let isHost = false;
 let roomData = null;
+
+// Local Play State
+let localPlayersCount = 4;
+let currentPlayerIndex = 1;
+let currentVoterIndex = 1;
+let localOutPlayer = 0;
+let localCurrentWord = null;
+let localCurrentHint = null;
+let localVotes = {};
+let lastUsedWordPerCategory = {};
 
 // DOM Elements
 const screens = document.querySelectorAll('.screen');
@@ -42,6 +53,8 @@ const themeBtns = document.querySelectorAll('[data-theme]');
 
 // Screens
 const homeScreen = document.getElementById('home-screen');
+const setupScreen = document.getElementById('setup-screen');
+const passScreen = document.getElementById('pass-screen');
 const createRoomScreen = document.getElementById('create-room-screen');
 const joinRoomScreen = document.getElementById('join-room-screen');
 const lobbyScreen = document.getElementById('lobby-screen');
@@ -55,8 +68,16 @@ const backBtns = document.querySelectorAll('.back-btn');
 const goHomeBtns = document.querySelectorAll('.go-home-btn');
 
 // Home screen buttons
+const btnPlayLocal = document.getElementById('play-local-btn');
 const btnCreateRoom = document.getElementById('create-room-btn');
 const btnJoinRoom = document.getElementById('join-room-btn');
+
+// Local Setup elements
+const countDisplay = document.getElementById('players-count-display');
+const decreaseBtn = document.getElementById('decrease-players');
+const increaseBtn = document.getElementById('increase-players');
+const localCategoryGrid = document.getElementById('local-category-selection');
+const startLocalGameBtn = document.getElementById('start-local-game-btn');
 
 // Create Room screen elements
 const categoryGrid = document.getElementById('category-selection');
@@ -72,29 +93,36 @@ const lobbyCount = document.getElementById('lobby-count');
 const lobbyStartBtn = document.getElementById('lobby-start-btn');
 const lobbyLeaveBtn = document.getElementById('lobby-leave-btn');
 
-// Reveal elements
+// Revealing elements (Multi & Local)
+const passPlayerName = document.getElementById('pass-player-name');
+const passRevealBtn = document.getElementById('pass-reveal-btn');
 const statusTitle = document.getElementById('status-title');
 const revealLabel = document.getElementById('reveal-label');
 const revealWord = document.getElementById('reveal-word');
 const revealBtn = document.getElementById('reveal-btn');
 const toQuestioningBtn = document.getElementById('to-questioning-btn');
+const nextPlayerBtn = document.getElementById('next-player-btn');
 
 // Questioning elements
 const qAsker = document.getElementById('q-asker');
 const qReceiver = document.getElementById('q-receiver');
 const nextQuestionBtn = document.getElementById('next-question-btn');
 const toVotingBtn = document.getElementById('to-voting-btn');
+const localNextQuestionBtn = document.getElementById('local-next-question-btn');
+const localToVotingBtn = document.getElementById('local-to-voting-btn');
 
 // Voting elements
 const votingGrid = document.getElementById('voting-grid');
 const endVotingBtn = document.getElementById('end-voting-btn');
 const votingStatusText = document.getElementById('voting-status-text');
+const localConfirmVoteBtn = document.getElementById('local-confirm-vote-btn');
 
 // Results elements
 const resultOutPlayer = document.getElementById('result-out-player');
 const resultWord = document.getElementById('result-word');
 const voteResultMsg = document.getElementById('vote-result-msg');
 const playAgainBtn = document.getElementById('play-again-btn');
+const localPlayAgainBtn = document.getElementById('local-play-again-btn');
 
 let selectedVoteId = null;
 
@@ -135,8 +163,8 @@ function applySettings() {
 
     updateTranslations();
     renderCategories();
-    if(roomData && roomData.status === 'playing') updateRevealUI();
-    if(roomData && roomData.status === 'results') transitionToResults();
+    if(isMultiplayer && roomData && roomData.status === 'playing') updateRevealUI();
+    if(isMultiplayer && roomData && roomData.status === 'results') transitionToResults();
 }
 
 function updateTranslations() {
@@ -147,6 +175,11 @@ function updateTranslations() {
             el.innerHTML = translations[gameState.lang][key];
         }
     });
+
+    if (!isMultiplayer && passScreen.classList.contains('active')) {
+        const playerText = translations[gameState.lang].player;
+        passPlayerName.textContent = `${playerText} ${currentPlayerIndex}`;
+    }
 }
 
 // ---------------- Screen Navigation ----------------
@@ -158,36 +191,156 @@ function showScreen(screen) {
     screen.classList.add('active');
 }
 
-// ---------------- Setup Logic ----------------
 function renderCategories() {
     categoryGrid.innerHTML = '';
+    localCategoryGrid.innerHTML = '';
     const cats = Object.values(gameData.categories);
     
     cats.forEach(cat => {
+        // Multi category
         const div = document.createElement('div');
         div.className = 'category-card';
         if (cat.id === gameState.categoryId) div.classList.add('selected');
-        
         div.innerHTML = `<h3>${cat.name[gameState.lang]}</h3>`;
-        div.onclick = () => {
-            gameState.categoryId = cat.id;
-            renderCategories();
-        };
+        div.onclick = () => { gameState.categoryId = cat.id; renderCategories(); };
         categoryGrid.appendChild(div);
+
+        // Local category
+        const localDiv = document.createElement('div');
+        localDiv.className = 'category-card';
+        if (cat.id === gameState.categoryId) localDiv.classList.add('selected');
+        localDiv.innerHTML = `<h3>${cat.name[gameState.lang]}</h3>`;
+        localDiv.onclick = () => { gameState.categoryId = cat.id; renderCategories(); };
+        localCategoryGrid.appendChild(localDiv);
     });
 }
 
-// ---------------- Multiplayer Core Functions ----------------
+// ==========================================
+// 1. LOCAL PLAY FUNCS (PASS THE PHONE)
+// ==========================================
+
+function updatePlayersCount(change) {
+    let newCount = localPlayersCount + change;
+    if (newCount >= 3 && newCount <= 20) {
+        localPlayersCount = newCount;
+        countDisplay.textContent = newCount;
+    }
+}
+
+function startLocalGame() {
+    isMultiplayer = false;
+    const cat = gameData.categories[gameState.categoryId];
+    localCurrentHint = cat.hint;
+    
+    let words = cat.words;
+    let availableWords = words.filter(w => w.en !== lastUsedWordPerCategory[cat.id]);
+    if (availableWords.length === 0) availableWords = words;
+    
+    const randIndex = Math.floor(Math.random() * availableWords.length);
+    localCurrentWord = availableWords[randIndex];
+    lastUsedWordPerCategory[cat.id] = localCurrentWord.en;
+    
+    localOutPlayer = Math.floor(Math.random() * localPlayersCount) + 1;
+    currentPlayerIndex = 1;
+    
+    showPassScreenLocal();
+}
+
+function showPassScreenLocal() {
+    updateTranslations();
+    showScreen(passScreen);
+}
+
+function showLocalReveal() {
+    document.getElementById('pre-reveal-content').style.display = 'none';
+    document.getElementById('post-reveal-content').style.display = 'flex';
+    
+    document.getElementById('local-reveal-actions').style.display = 'flex';
+    document.getElementById('host-reveal-actions').style.display = 'none';
+
+    revealScreen.classList.remove('in-state', 'out-state');
+    if (currentPlayerIndex === localOutPlayer) {
+        revealScreen.classList.add('out-state');
+        statusTitle.textContent = translations[gameState.lang].you_are_out;
+        revealLabel.textContent = translations[gameState.lang].hint_is;
+        revealWord.textContent = localCurrentHint[gameState.lang];
+    } else {
+        revealScreen.classList.add('in-state');
+        statusTitle.textContent = translations[gameState.lang].you_are_in;
+        revealLabel.textContent = translations[gameState.lang].word_is;
+        revealWord.textContent = localCurrentWord[gameState.lang];
+    }
+    showScreen(revealScreen);
+}
+
+function handleLocalNextPlayer() {
+    if (currentPlayerIndex < localPlayersCount) {
+        currentPlayerIndex++;
+        showPassScreenLocal();
+    } else {
+        transitionToQuestioning();
+    }
+}
+
+function nextQuestionPairLocal() {
+    let asker = Math.floor(Math.random() * localPlayersCount) + 1;
+    let receiver = Math.floor(Math.random() * localPlayersCount) + 1;
+    while(asker === receiver) receiver = Math.floor(Math.random() * localPlayersCount) + 1;
+    
+    const playerText = translations[gameState.lang].player;
+    qAsker.textContent = `${playerText} ${asker}`;
+    qReceiver.textContent = `${playerText} ${receiver}`;
+}
+
+function showVoterTurnLocal() {
+    selectedVoteId = null;
+    localConfirmVoteBtn.disabled = true;
+    
+    votingGrid.innerHTML = '';
+    const playerText = translations[gameState.lang].player;
+    votingStatusText.textContent = gameState.lang === 'ar' ? 
+        `${playerText} ${currentVoterIndex}، صوّت لمين برا السالفة` : 
+        `${playerText} ${currentVoterIndex}, vote who is OUT`;
+    
+    for (let i = 1; i <= localPlayersCount; i++) {
+        if (i === currentVoterIndex) continue;
+        
+        const div = document.createElement('div');
+        div.className = 'vote-card';
+        div.textContent = `${playerText} ${i}`;
+        div.onclick = () => {
+            selectedVoteId = i;
+            document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+            localConfirmVoteBtn.disabled = false;
+        };
+        votingGrid.appendChild(div);
+    }
+}
+
+function confirmLocalVote() {
+    localVotes[currentVoterIndex] = selectedVoteId;
+    if (currentVoterIndex < localPlayersCount) {
+        currentVoterIndex++;
+        showVoterTurnLocal();
+    } else {
+        transitionToResults();
+    }
+}
+
+
+// ==========================================
+// 2. MULTIPLAYER ONLINE FUNCS
+// ==========================================
 
 function createRoom() {
+    isMultiplayer = true;
     const hostName = document.getElementById('host-name-input').value.trim() || 'Host';
     currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
     myPlayerId = 'p_' + Math.random().toString(36).substr(2, 9);
     isHost = true;
     
     roomRef = db.ref('rooms/' + currentRoomCode);
-    
-    // Set auto-cleanup if host disconnects
     roomRef.onDisconnect().remove();
     
     roomRef.set({
@@ -201,12 +354,13 @@ function createRoom() {
         listenToRoom();
         showScreen(lobbyScreen);
     }).catch(err => {
-        alert("Firebase error. Did you add the proper configuration in app.js?");
+        alert("Firebase error. Ensure Realtime DB is activated.");
         console.error(err);
     });
 }
 
 function joinRoom() {
+    isMultiplayer = true;
     const code = document.getElementById('room-code-input').value.trim();
     const guestName = document.getElementById('guest-name-input').value.trim() || 'Guest';
     
@@ -222,7 +376,6 @@ function joinRoom() {
             isHost = false;
             roomRef = db.ref('rooms/' + currentRoomCode);
             
-            // Auto remove guest on disconnect
             roomRef.child('players/' + myPlayerId).onDisconnect().remove();
             
             roomRef.child('players/' + myPlayerId).set({
@@ -247,13 +400,11 @@ function leaveRoom() {
         }
         roomRef.off();
     }
-    
     myPlayerId = null;
     currentRoomCode = null;
     roomRef = null;
     isHost = false;
     roomData = null;
-    
     showScreen(homeScreen);
 }
 
@@ -273,7 +424,6 @@ function listenToRoom() {
         
         updateLobbyUI();
         
-        // Handle transitions based on status changes
         if (data.status === 'playing' && oldStatus !== 'playing') {
             transitionToReveal();
         } else if (data.status === 'questioning' && oldStatus !== 'questioning') {
@@ -284,17 +434,11 @@ function listenToRoom() {
             transitionToResults();
         }
         
-        if (data.status === 'questioning') {
-            updateQuestioningUI();
-        }
-        
-        if (data.status === 'voting') {
-            updateVotingRealtime();
-        }
+        if (data.status === 'questioning') updateQuestioningUI();
+        if (data.status === 'voting') updateVotingRealtime();
     });
 }
 
-// ---------------- Lobby Phase ----------------
 function updateLobbyUI() {
     if (!roomData || roomData.status !== 'lobby') return;
     
@@ -317,12 +461,12 @@ function updateLobbyUI() {
     });
     
     if (isHost) {
-        lobbyStartBtn.style.display = pKeys.length >= 3 ? 'inline-flex' : 'none';
-        if (pKeys.length < 3) {
+        if (pKeys.length < 2) {
             lobbyStartBtn.style.display = 'inline-flex';
             lobbyStartBtn.disabled = true;
-            lobbyStartBtn.innerHTML = `<span>Waiting for players (${pKeys.length}/3)</span>`;
+            lobbyStartBtn.innerHTML = `<span>Waiting for players (${pKeys.length}/2)</span>`;
         } else {
+            lobbyStartBtn.style.display = 'inline-flex';
             lobbyStartBtn.disabled = false;
             lobbyStartBtn.innerHTML = `<span data-i18n="start_game">${translations[gameState.lang].start_game}</span>`;
         }
@@ -333,9 +477,8 @@ function updateLobbyUI() {
 
 function startGameMultiplayer() {
     if (!isHost || !roomData) return;
-    
     const pKeys = Object.keys(roomData.players);
-    if (pKeys.length < 3) return;
+    if (pKeys.length < 2) return; // Allow 2 for testing, but ideally 3
     
     const cat = gameData.categories[roomData.categoryId];
     const words = cat.words;
@@ -356,11 +499,15 @@ function startGameMultiplayer() {
     });
 }
 
-// ---------------- Reveal Phase ----------------
+// ==========================================
+// 3. SHARED PHASES (BRANCHING LOGIC)
+// ==========================================
+
 function transitionToReveal() {
     document.getElementById('pre-reveal-content').style.display = 'flex';
     document.getElementById('post-reveal-content').style.display = 'none';
     
+    document.getElementById('local-reveal-actions').style.display = 'none';
     if (isHost) {
         document.getElementById('host-reveal-actions').style.display = 'flex';
     } else {
@@ -378,13 +525,13 @@ function showMyRole() {
 function updateRevealUI() {
     if(!roomData || !roomData.game) return;
     if (myPlayerId === roomData.game.outPlayerId) {
-        revealScreen.classList.remove('in-state');
+        revealScreen.classList.remove('in-state', 'out-state');
         revealScreen.classList.add('out-state');
         statusTitle.textContent = translations[gameState.lang].you_are_out;
         revealLabel.textContent = translations[gameState.lang].hint_is;
         revealWord.textContent = roomData.game.hint[gameState.lang];
     } else {
-        revealScreen.classList.remove('out-state');
+        revealScreen.classList.remove('out-state', 'in-state');
         revealScreen.classList.add('in-state');
         statusTitle.textContent = translations[gameState.lang].you_are_in;
         revealLabel.textContent = translations[gameState.lang].word_is;
@@ -392,90 +539,60 @@ function updateRevealUI() {
     }
 }
 
-function startQuestioningPhase() {
-    if (!isHost) return;
-    
-    const pIds = Object.keys(roomData.players);
-    let asker = pIds[Math.floor(Math.random() * pIds.length)];
-    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
-    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
-    
-    roomRef.update({
-        status: 'questioning',
-        game: {
-            ...roomData.game,
-            askerId: asker,
-            receiverId: receiver
-        }
-    });
-}
-
-// ---------------- Questioning Phase ----------------
 function transitionToQuestioning() {
     showScreen(questioningScreen);
-    
-    if (isHost) {
-        document.getElementById('host-questioning-actions').style.display = 'flex';
-        document.getElementById('guest-questioning-actions').style.display = 'none';
-    } else {
+    if (!isMultiplayer) {
+        document.getElementById('local-questioning-actions').style.display = 'flex';
         document.getElementById('host-questioning-actions').style.display = 'none';
-        document.getElementById('guest-questioning-actions').style.display = 'flex';
+        document.getElementById('guest-questioning-actions').style.display = 'none';
+        nextQuestionPairLocal();
+    } else {
+        document.getElementById('local-questioning-actions').style.display = 'none';
+        if (isHost) {
+            document.getElementById('host-questioning-actions').style.display = 'flex';
+            document.getElementById('guest-questioning-actions').style.display = 'none';
+        } else {
+            document.getElementById('host-questioning-actions').style.display = 'none';
+            document.getElementById('guest-questioning-actions').style.display = 'flex';
+        }
+        updateQuestioningUI();
     }
-    
-    updateQuestioningUI();
 }
 
 function updateQuestioningUI() {
     if (!roomData || !roomData.game || !roomData.game.askerId) return;
     const askerName = roomData.players[roomData.game.askerId] ? roomData.players[roomData.game.askerId].name : "Unknown";
     const receiverName = roomData.players[roomData.game.receiverId] ? roomData.players[roomData.game.receiverId].name : "Unknown";
-    
     qAsker.textContent = askerName;
     qReceiver.textContent = receiverName;
 }
 
-function nextQuestionPair() {
-    if(!isHost) return;
-    const pIds = Object.keys(roomData.players);
-    let asker = pIds[Math.floor(Math.random() * pIds.length)];
-    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
-    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
-    
-    roomRef.child('game').update({
-        askerId: asker,
-        receiverId: receiver
-    });
-}
-
-function startVotingPhase() {
-    if(!isHost) return;
-    roomRef.update({
-        status: 'voting',
-        votes: {}
-    });
-}
-
-// ---------------- Voting Phase ----------------
 function transitionToVoting() {
     showScreen(votingScreen);
     selectedVoteId = null;
     
-    if (isHost) {
-        document.getElementById('host-voting-actions').style.display = 'flex';
-    } else {
+    if (!isMultiplayer) {
+        currentVoterIndex = 1;
+        localVotes = {};
+        document.getElementById('local-voting-actions').style.display = 'flex';
         document.getElementById('host-voting-actions').style.display = 'none';
+        showVoterTurnLocal();
+    } else {
+        document.getElementById('local-voting-actions').style.display = 'none';
+        if (isHost) {
+            document.getElementById('host-voting-actions').style.display = 'flex';
+        } else {
+            document.getElementById('host-voting-actions').style.display = 'none';
+        }
+        renderVotingGrid();
+        updateVotingRealtime();
     }
-    
-    renderVotingGrid();
-    updateVotingRealtime();
 }
 
 function renderVotingGrid() {
     votingGrid.innerHTML = '';
-    
     Object.keys(roomData.players).forEach(pId => {
-        if (pId === myPlayerId) return; // Can't vote for self
-        
+        if (pId === myPlayerId) return;
         const div = document.createElement('div');
         div.className = 'vote-card';
         div.id = 'vote-card-' + pId;
@@ -484,8 +601,6 @@ function renderVotingGrid() {
             selectedVoteId = pId;
             document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
             div.classList.add('selected');
-            
-            // Push vote to firebase
             roomRef.child('votes/' + myPlayerId).set(pId);
         };
         votingGrid.appendChild(div);
@@ -499,17 +614,11 @@ function updateVotingRealtime() {
     const expectedVotes = Object.keys(roomData.players).length; 
     
     votingStatusText.textContent = `${totalVotes} / ${expectedVotes} voted`;
-    
-    // Clear all counters
     document.querySelectorAll('.vote-count-badge').forEach(b => b.remove());
     
-    // Tally votes
     const voteCounts = {};
-    Object.values(votes).forEach(votedId => {
-        voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
-    });
+    Object.values(votes).forEach(votedId => { voteCounts[votedId] = (voteCounts[votedId] || 0) + 1; });
     
-    // Display counts
     Object.keys(voteCounts).forEach(pId => {
         const card = document.getElementById('vote-card-' + pId);
         if (card) {
@@ -520,7 +629,6 @@ function updateVotingRealtime() {
         }
     });
 
-    // Keep my selection highlighted
     if (votes[myPlayerId]) {
         selectedVoteId = votes[myPlayerId];
         document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
@@ -529,17 +637,37 @@ function updateVotingRealtime() {
     }
 }
 
-function endVotingAndShowResults() {
-    if(!isHost) return;
-    roomRef.update({
-         status: 'results'
-    });
-}
-
-// ---------------- Results Phase ----------------
 function transitionToResults() {
     showScreen(resultsScreen);
     
+    if (!isMultiplayer) {
+         document.getElementById('local-results-actions').style.display = 'flex';
+         document.getElementById('host-results-actions').style.display = 'none';
+         document.getElementById('guest-results-actions').style.display = 'none';
+         
+         const counts = {};
+         let maxVotes = 0; let mostVotedId = -1;
+         Object.values(localVotes).forEach(v => {
+             counts[v] = (counts[v] || 0) + 1;
+             if(counts[v] > maxVotes) { maxVotes = counts[v]; mostVotedId = v; }
+         });
+         
+         const playerText = translations[gameState.lang].player;
+         resultOutPlayer.textContent = `${playerText} ${localOutPlayer}`;
+         resultWord.textContent = localCurrentWord[gameState.lang];
+         
+         voteResultMsg.classList.remove('vote-correct', 'vote-wrong');
+         if (mostVotedId === localOutPlayer) {
+             voteResultMsg.textContent = translations[gameState.lang].correct_guess;
+             voteResultMsg.classList.add('vote-correct');
+         } else {
+             voteResultMsg.textContent = translations[gameState.lang].wrong_guess;
+             voteResultMsg.classList.add('vote-wrong');
+         }
+         return;
+    }
+    
+    document.getElementById('local-results-actions').style.display = 'none';
     if (isHost) {
         document.getElementById('host-results-actions').style.display = 'flex';
         document.getElementById('guest-results-actions').style.display = 'none';
@@ -550,8 +678,7 @@ function transitionToResults() {
     
     const votes = roomData.votes || {};
     const voteCounts = {};
-    let maxVotes = 0;
-    let mostVotedId = null;
+    let maxVotes = 0; let mostVotedId = null;
     
     Object.values(votes).forEach(votedId => {
         voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
@@ -576,6 +703,35 @@ function transitionToResults() {
     }
 }
 
+// ---------------- Multi Flow actions ----------------
+document.getElementById('to-questioning-btn').addEventListener('click', () => {
+    if (!isHost) return;
+    const pIds = Object.keys(roomData.players);
+    let asker = pIds[Math.floor(Math.random() * pIds.length)];
+    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    
+    roomRef.update({
+        status: 'questioning',
+        game: { ...roomData.game, askerId: asker, receiverId: receiver }
+    });
+});
+
+document.getElementById('next-question-btn').addEventListener('click', () => {
+    if (!isHost) return;
+    const pIds = Object.keys(roomData.players);
+    let asker = pIds[Math.floor(Math.random() * pIds.length)];
+    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    
+    roomRef.child('game').update({ askerId: asker, receiverId: receiver });
+});
+
+document.getElementById('to-voting-btn').addEventListener('click', () => {
+    if (!isHost) return;
+    roomRef.update({ status: 'voting', votes: {} });
+});
+
 function resetToLobby() {
     if(!isHost) return;
     roomRef.update({
@@ -589,12 +745,9 @@ function resetToLobby() {
 
 // ---------------- Event Listeners ----------------
 function attachEventListeners() {
-    // Settings Modals
     settingsBtn.addEventListener('click', () => modal.classList.add('active'));
     closeSettingsBtn.addEventListener('click', () => modal.classList.remove('active'));
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.classList.remove('active');
-    });
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
 
     langBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -603,7 +756,6 @@ function attachEventListeners() {
             applySettings();
         });
     });
-
     themeBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             gameState.theme = e.target.dataset.theme;
@@ -613,40 +765,38 @@ function attachEventListeners() {
     });
 
     // Navigation Home
+    btnPlayLocal.addEventListener('click', () => showScreen(setupScreen));
     btnCreateRoom.addEventListener('click', () => showScreen(createRoomScreen));
     btnJoinRoom.addEventListener('click', () => showScreen(joinRoomScreen));
     
     backBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            if(btn.id !== 'lobby-back-btn') {
-                showScreen(homeScreen);
-            }
+            if(btn.id !== 'lobby-back-btn') showScreen(homeScreen);
         });
     });
+    goHomeBtns.forEach(btn => btn.addEventListener('click', () => {
+        if(isMultiplayer) leaveRoom(); else showScreen(homeScreen);
+    }));
 
-    goHomeBtns.forEach(btn => {
-        btn.addEventListener('click', leaveRoom);
-    });
+    // Local Logic binds
+    decreaseBtn.addEventListener('click', () => updatePlayersCount(-1));
+    increaseBtn.addEventListener('click', () => updatePlayersCount(1));
+    startLocalGameBtn.addEventListener('click', startLocalGame);
+    passRevealBtn.addEventListener('click', showLocalReveal);
+    nextPlayerBtn.addEventListener('click', handleLocalNextPlayer);
+    localNextQuestionBtn.addEventListener('click', nextQuestionPairLocal);
+    localToVotingBtn.addEventListener('click', transitionToVoting);
+    localConfirmVoteBtn.addEventListener('click', confirmLocalVote);
+    localPlayAgainBtn.addEventListener('click', () => showScreen(setupScreen));
 
-    // Room Actions
+    // Multi Logic binds
     createBtn.addEventListener('click', createRoom);
     joinBtn.addEventListener('click', joinRoom);
     lobbyLeaveBtn.addEventListener('click', leaveRoom);
     document.getElementById('lobby-back-btn').addEventListener('click', leaveRoom);
     lobbyStartBtn.addEventListener('click', startGameMultiplayer);
-    
-    // Gameplay flow
     revealBtn.addEventListener('click', showMyRole);
-    toQuestioningBtn.addEventListener('click', startQuestioningPhase);
-
-    // Questioning
-    nextQuestionBtn.addEventListener('click', nextQuestionPair);
-    toVotingBtn.addEventListener('click', startVotingPhase);
-
-    // Voting
-    endVotingBtn.addEventListener('click', endVotingAndShowResults);
-    
-    // Results
+    endVotingBtn.addEventListener('click', () => { if(isHost) roomRef.update({status: 'results'}); });
     playAgainBtn.addEventListener('click', resetToLobby);
 }
 

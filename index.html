@@ -28,11 +28,67 @@
             </div>
             
             <div class="action-container flex-col">
-                <button id="create-room-btn" class="btn btn-primary btn-large">
-                    <span data-i18n="create_room">Create Room</span>
+                <button id="play-local-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="play_local">Play on one device</span>
                 </button>
-                <button id="join-room-btn" class="btn btn-secondary btn-large">
-                    <span data-i18n="join_room">Join Room</span>
+                <div style="display: flex; gap: 10px; width: 100%; max-width: 320px;">
+                    <button id="create-room-btn" class="btn btn-secondary btn-large" style="flex: 1; font-size: 15px; padding: 18px 10px;">
+                        <span data-i18n="create_room">Create Room</span>
+                    </button>
+                    <button id="join-room-btn" class="btn btn-secondary btn-large" style="flex: 1; font-size: 15px; padding: 18px 10px;">
+                        <span data-i18n="join_room">Join Room</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Local Setup Screen -->
+        <section id="setup-screen" class="screen">
+            <div class="header-with-back">
+                <button class="icon-btn back-btn" aria-label="Back">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path></svg>
+                </button>
+                <h2 data-i18n="setup_title">Game Setup</h2>
+            </div>
+            
+            <div class="setup-container">
+                <div class="form-group">
+                    <label data-i18n="num_players">Number of Players</label>
+                    <div class="counter-control">
+                        <button id="decrease-players" class="counter-btn">-</button>
+                        <span id="players-count-display" class="counter-value">4</span>
+                        <button id="increase-players" class="counter-btn">+</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="category">Category</label>
+                    <div id="local-category-selection" class="category-grid">
+                        <!-- Categories injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-container bottom">
+                <button id="start-local-game-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="start_game">Start Game</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pass Phone Screen -->
+        <section id="pass-screen" class="screen">
+            <div class="center-content">
+                <div class="player-avatar">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 256 256"><path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z" opacity="0.2"></path><path d="M128,152a72,72,0,1,0-72-72A72.08,72.08,0,0,0,128,152Zm0-128a56,56,0,1,1-56,56A56.06,56.06,0,0,1,128,24Zm84.62,180.81A24.12,24.12,0,0,0,208,200H48a24.12,24.12,0,0,0-4.62,4.81,8,8,0,1,1-12.76-9.62c16-21.23,38.56-37.49,64.21-46.34a71.91,71.91,0,0,0,66.34,0c25.65,8.85,48.19,25.11,64.21,46.34A8,8,0,1,1,212.62,204.81Z"></path></svg>
+                </div>
+                <h2 data-i18n="pass_to">Pass to</h2>
+                <h1 id="pass-player-name" class="highlight-text">Player 1</h1>
+            </div>
+            
+            <div class="action-container bottom">
+                <button id="pass-reveal-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="reveal">Reveal</span>
                 </button>
             </div>
         </section>
@@ -140,6 +196,11 @@
                 </div>
             </div>
             
+            <div class="action-container bottom" id="local-reveal-actions" style="display: none;">
+                <button id="next-player-btn" class="btn btn-secondary btn-large btn-outline" style="color: white; border-color: white;">
+                    <span data-i18n="next_player">Next Player</span>
+                </button>
+            </div>
             <div class="action-container bottom" id="host-reveal-actions" style="display: none;">
                 <button id="to-questioning-btn" class="btn btn-secondary btn-large btn-outline" style="color: white; border-color: white;">
                     <span data-i18n="start_questioning">Start Questioning Phase</span>
@@ -162,6 +223,14 @@
                 </div>
             </div>
             
+            <div class="action-container bottom flex-col" id="local-questioning-actions" style="display: none;">
+                <button id="local-next-question-btn" class="btn btn-secondary btn-large mb-3">
+                    <span data-i18n="next_question">Next Random Pair</span>
+                </button>
+                <button id="local-to-voting-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="start_voting">Start Voting</span>
+                </button>
+            </div>
             <div class="action-container bottom flex-col" id="host-questioning-actions" style="display: none;">
                 <button id="next-question-btn" class="btn btn-secondary btn-large mb-3">
                     <span data-i18n="next_question">Next Random Pair</span>
@@ -188,6 +257,11 @@
             
             <div class="action-container bottom">
                 <p id="voting-status-text" class="text-center mb-3" style="color: var(--text-muted);"></p>
+                <div id="local-voting-actions" style="display: none; width:100%; flex-direction:column; align-items:center; gap: 10px;">
+                    <button id="local-confirm-vote-btn" class="btn btn-primary btn-large" disabled>
+                        <span data-i18n="confirm_vote">Confirm Vote</span>
+                    </button>
+                </div>
                 <div id="host-voting-actions" style="display: none; width:100%; flex-direction:column; align-items:center; gap: 10px;">
                     <button id="end-voting-btn" class="btn btn-primary btn-large">
                         <span data-i18n="end_voting_show_results">Show Results</span>
@@ -216,6 +290,14 @@
                 </div>
             </div>
             
+            <div class="action-container bottom flex-col" id="local-results-actions" style="display: none;">
+                <button id="local-play-again-btn" class="btn btn-primary btn-large mb-3">
+                    <span data-i18n="play_again">Play Again</span>
+                </button>
+                <button class="btn btn-secondary btn-large go-home-btn">
+                    <span data-i18n="home">Home</span>
+                </button>
+            </div>
             <div class="action-container bottom flex-col" id="host-results-actions" style="display: none;">
                 <button id="play-again-btn" class="btn btn-primary btn-large mb-3">
                     <span data-i18n="play_again">Play Again</span>
