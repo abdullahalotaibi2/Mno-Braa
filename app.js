@@ -1,22 +1,34 @@
-// Game State
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAYx8XacJeWUUhuYPVdE0IKRSsNknGQp2I",
+    authDomain: "mnobraa.firebaseapp.com",
+    databaseURL: "https://mnobraa-default-rtdb.firebaseio.com",
+    projectId: "mnobraa",
+    storageBucket: "mnobraa.firebasestorage.app",
+    messagingSenderId: "424471788993",
+    appId: "1:424471788993:web:4dc21987d5c83563448340",
+    measurementId: "G-WKK6MNK8NH"
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const db = firebase.database();
+
+// Game State (Local)
 const gameState = {
     lang: 'ar',
     theme: 'dark',
-    playersCount: 4,
     categoryId: 'house',
-    
-    // Round specific
-    outPlayer: 0,
-    currentWord: null,
-    currentHint: null,
-    currentPlayerIndex: 1,
-    currentVoterIndex: 1,
-    selectedVote: null,
-    votes: {},
-    
-    // History
-    lastUsedWordPerCategory: {}
 };
+
+// Multiplayer State (Synced)
+let myPlayerId = null;
+let currentRoomCode = null;
+let roomRef = null;
+let isHost = false;
+let roomData = null;
 
 // DOM Elements
 const screens = document.querySelectorAll('.screen');
@@ -30,33 +42,42 @@ const themeBtns = document.querySelectorAll('[data-theme]');
 
 // Screens
 const homeScreen = document.getElementById('home-screen');
-const setupScreen = document.getElementById('setup-screen');
-const passScreen = document.getElementById('pass-screen');
+const createRoomScreen = document.getElementById('create-room-screen');
+const joinRoomScreen = document.getElementById('join-room-screen');
+const lobbyScreen = document.getElementById('lobby-screen');
 const revealScreen = document.getElementById('reveal-screen');
 const questioningScreen = document.getElementById('questioning-screen');
 const votingScreen = document.getElementById('voting-screen');
 const resultsScreen = document.getElementById('results-screen');
 
 // Navigation buttons
-const playBtn = document.getElementById('play-btn');
 const backBtns = document.querySelectorAll('.back-btn');
 const goHomeBtns = document.querySelectorAll('.go-home-btn');
-const playAgainBtn = document.getElementById('play-again-btn');
 
-// Setup screen elements
-const decreaseBtn = document.getElementById('decrease-players');
-const increaseBtn = document.getElementById('increase-players');
-const countDisplay = document.getElementById('players-count-display');
+// Home screen buttons
+const btnCreateRoom = document.getElementById('create-room-btn');
+const btnJoinRoom = document.getElementById('join-room-btn');
+
+// Create Room screen elements
 const categoryGrid = document.getElementById('category-selection');
-const startGameBtn = document.getElementById('start-game-btn');
+const createBtn = document.getElementById('create-btn');
 
-// Game elements
-const passPlayerName = document.getElementById('pass-player-name');
-const revealBtn = document.getElementById('reveal-btn');
+// Join Room screen elements
+const joinBtn = document.getElementById('join-btn');
+
+// Lobby elements
+const lobbyRoomCode = document.getElementById('lobby-room-code');
+const lobbyPlayersList = document.getElementById('lobby-players-list');
+const lobbyCount = document.getElementById('lobby-count');
+const lobbyStartBtn = document.getElementById('lobby-start-btn');
+const lobbyLeaveBtn = document.getElementById('lobby-leave-btn');
+
+// Reveal elements
 const statusTitle = document.getElementById('status-title');
 const revealLabel = document.getElementById('reveal-label');
 const revealWord = document.getElementById('reveal-word');
-const nextPlayerBtn = document.getElementById('next-player-btn');
+const revealBtn = document.getElementById('reveal-btn');
+const toQuestioningBtn = document.getElementById('to-questioning-btn');
 
 // Questioning elements
 const qAsker = document.getElementById('q-asker');
@@ -66,12 +87,16 @@ const toVotingBtn = document.getElementById('to-voting-btn');
 
 // Voting elements
 const votingGrid = document.getElementById('voting-grid');
-const confirmVoteBtn = document.getElementById('confirm-vote-btn');
+const endVotingBtn = document.getElementById('end-voting-btn');
+const votingStatusText = document.getElementById('voting-status-text');
 
 // Results elements
 const resultOutPlayer = document.getElementById('result-out-player');
 const resultWord = document.getElementById('result-word');
 const voteResultMsg = document.getElementById('vote-result-msg');
+const playAgainBtn = document.getElementById('play-again-btn');
+
+let selectedVoteId = null;
 
 // Initialization
 function init() {
@@ -95,14 +120,12 @@ function saveSettings() {
 }
 
 function applySettings() {
-    // Theme
     document.body.setAttribute('data-theme', gameState.theme);
     themeBtns.forEach(btn => {
         if (btn.dataset.theme === gameState.theme) btn.classList.add('active');
         else btn.classList.remove('active');
     });
 
-    // Language
     document.documentElement.lang = gameState.lang;
     document.documentElement.dir = gameState.lang === 'ar' ? 'rtl' : 'ltr';
     langBtns.forEach(btn => {
@@ -111,7 +134,9 @@ function applySettings() {
     });
 
     updateTranslations();
-    renderCategories(); // Re-render to update text
+    renderCategories();
+    if(roomData && roomData.status === 'playing') updateRevealUI();
+    if(roomData && roomData.status === 'results') transitionToResults();
 }
 
 function updateTranslations() {
@@ -122,11 +147,6 @@ function updateTranslations() {
             el.innerHTML = translations[gameState.lang][key];
         }
     });
-
-    // Update dynamic texts if we are in specific screens
-    if (passScreen.classList.contains('active')) {
-        updatePassScreenText();
-    }
 }
 
 // ---------------- Screen Navigation ----------------
@@ -149,196 +169,422 @@ function renderCategories() {
         if (cat.id === gameState.categoryId) div.classList.add('selected');
         
         div.innerHTML = `<h3>${cat.name[gameState.lang]}</h3>`;
-        div.onclick = () => selectCategory(cat.id);
-        
+        div.onclick = () => {
+            gameState.categoryId = cat.id;
+            renderCategories();
+        };
         categoryGrid.appendChild(div);
     });
+}
+
+// ---------------- Multiplayer Core Functions ----------------
+
+function createRoom() {
+    const hostName = document.getElementById('host-name-input').value.trim() || 'Host';
+    currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    myPlayerId = 'p_' + Math.random().toString(36).substr(2, 9);
+    isHost = true;
     
-    checkStartGameEligibility();
+    roomRef = db.ref('rooms/' + currentRoomCode);
+    
+    // Set auto-cleanup if host disconnects
+    roomRef.onDisconnect().remove();
+    
+    roomRef.set({
+        status: 'lobby',
+        categoryId: gameState.categoryId,
+        hostId: myPlayerId,
+        players: {
+            [myPlayerId]: { name: hostName, isHost: true }
+        }
+    }).then(() => {
+        listenToRoom();
+        showScreen(lobbyScreen);
+    }).catch(err => {
+        alert("Firebase error. Did you add the proper configuration in app.js?");
+        console.error(err);
+    });
 }
 
-function selectCategory(id) {
-    gameState.categoryId = id;
-    renderCategories();
-}
-
-function updatePlayersCount(change) {
-    let newCount = gameState.playersCount + change;
-    if (newCount >= 3 && newCount <= 20) {
-        gameState.playersCount = newCount;
-        countDisplay.textContent = newCount;
+function joinRoom() {
+    const code = document.getElementById('room-code-input').value.trim();
+    const guestName = document.getElementById('guest-name-input').value.trim() || 'Guest';
+    
+    if (!code || code.length !== 4) {
+        alert("Please enter a 4-digit code");
+        return;
     }
+    
+    db.ref('rooms/' + code).once('value', snapshot => {
+        if (snapshot.exists()) {
+            currentRoomCode = code;
+            myPlayerId = 'p_' + Math.random().toString(36).substr(2, 9);
+            isHost = false;
+            roomRef = db.ref('rooms/' + currentRoomCode);
+            
+            // Auto remove guest on disconnect
+            roomRef.child('players/' + myPlayerId).onDisconnect().remove();
+            
+            roomRef.child('players/' + myPlayerId).set({
+                name: guestName,
+                isHost: false
+            }).then(() => {
+                listenToRoom();
+                showScreen(lobbyScreen);
+            });
+        } else {
+            alert('Room not found');
+        }
+    });
 }
 
-function checkStartGameEligibility() {
-    if (gameState.categoryId && gameState.playersCount >= 3) {
-        startGameBtn.disabled = false;
+function leaveRoom() {
+    if (roomRef && myPlayerId) {
+        if (isHost) {
+            roomRef.remove();
+        } else {
+            roomRef.child('players/' + myPlayerId).remove();
+        }
+        roomRef.off();
+    }
+    
+    myPlayerId = null;
+    currentRoomCode = null;
+    roomRef = null;
+    isHost = false;
+    roomData = null;
+    
+    showScreen(homeScreen);
+}
+
+function listenToRoom() {
+    roomRef.on('value', snapshot => {
+        if (!snapshot.exists()) {
+            if(currentRoomCode) {
+                alert("Room closed");
+                leaveRoom();
+            }
+            return;
+        }
+        
+        const data = snapshot.val();
+        const oldStatus = roomData ? roomData.status : null;
+        roomData = data;
+        
+        updateLobbyUI();
+        
+        // Handle transitions based on status changes
+        if (data.status === 'playing' && oldStatus !== 'playing') {
+            transitionToReveal();
+        } else if (data.status === 'questioning' && oldStatus !== 'questioning') {
+            transitionToQuestioning();
+        } else if (data.status === 'voting' && oldStatus !== 'voting') {
+            transitionToVoting();
+        } else if (data.status === 'results' && oldStatus !== 'results') {
+            transitionToResults();
+        }
+        
+        if (data.status === 'questioning') {
+            updateQuestioningUI();
+        }
+        
+        if (data.status === 'voting') {
+            updateVotingRealtime();
+        }
+    });
+}
+
+// ---------------- Lobby Phase ----------------
+function updateLobbyUI() {
+    if (!roomData || roomData.status !== 'lobby') return;
+    
+    lobbyRoomCode.textContent = currentRoomCode;
+    lobbyPlayersList.innerHTML = '';
+    
+    const players = roomData.players || {};
+    const pKeys = Object.keys(players);
+    lobbyCount.textContent = pKeys.length;
+    
+    pKeys.forEach(pId => {
+        const p = players[pId];
+        const div = document.createElement('div');
+        div.className = 'player-item';
+        
+        let hostBadge = p.isHost ? '<span class="host-badge">Host</span>' : '';
+        div.innerHTML = `<span>${p.name} ${myPlayerId === pId ? '(You)' : ''}</span>${hostBadge}`;
+        
+        lobbyPlayersList.appendChild(div);
+    });
+    
+    if (isHost) {
+        lobbyStartBtn.style.display = pKeys.length >= 3 ? 'inline-flex' : 'none';
+        if (pKeys.length < 3) {
+            lobbyStartBtn.style.display = 'inline-flex';
+            lobbyStartBtn.disabled = true;
+            lobbyStartBtn.innerHTML = `<span>Waiting for players (${pKeys.length}/3)</span>`;
+        } else {
+            lobbyStartBtn.disabled = false;
+            lobbyStartBtn.innerHTML = `<span data-i18n="start_game">${translations[gameState.lang].start_game}</span>`;
+        }
     } else {
-        startGameBtn.disabled = true;
+        lobbyStartBtn.style.display = 'none';
     }
 }
 
-// ---------------- Game Logic ----------------
-function startGame() {
-    // Select category and word
-    const cat = gameData.categories[gameState.categoryId];
-    gameState.currentHint = cat.hint;
+function startGameMultiplayer() {
+    if (!isHost || !roomData) return;
     
-    let words = cat.words;
-    let availableWords = words.filter(w => w.en !== gameState.lastUsedWordPerCategory[cat.id]);
+    const pKeys = Object.keys(roomData.players);
+    if (pKeys.length < 3) return;
     
-    if (availableWords.length === 0) availableWords = words; // Fallback if 1 word in cat
+    const cat = gameData.categories[roomData.categoryId];
+    const words = cat.words;
+    const randIndex = Math.floor(Math.random() * words.length);
+    const chosenWord = words[randIndex];
     
-    // Random word
-    const randIndex = Math.floor(Math.random() * availableWords.length);
-    gameState.currentWord = availableWords[randIndex];
-    gameState.lastUsedWordPerCategory[cat.id] = gameState.currentWord.en;
+    const outPlayerIndex = Math.floor(Math.random() * pKeys.length);
+    const outPlayerId = pKeys[outPlayerIndex];
     
-    // Select random out player
-    gameState.outPlayer = Math.floor(Math.random() * gameState.playersCount) + 1;
-    gameState.currentPlayerIndex = 1;
-    
-    startRound();
+    roomRef.update({
+        status: 'playing',
+        game: {
+            word: chosenWord,
+            hint: cat.hint,
+            outPlayerId: outPlayerId
+        },
+        votes: {}
+    });
 }
 
-function startRound() {
-    updatePassScreenText();
-    showScreen(passScreen);
-}
-
-function updatePassScreenText() {
-    const playerText = translations[gameState.lang].player;
-    passPlayerName.textContent = `${playerText} ${gameState.currentPlayerIndex}`;
-}
-
-function showReveal() {
+// ---------------- Reveal Phase ----------------
+function transitionToReveal() {
+    document.getElementById('pre-reveal-content').style.display = 'flex';
+    document.getElementById('post-reveal-content').style.display = 'none';
+    
+    if (isHost) {
+        document.getElementById('host-reveal-actions').style.display = 'flex';
+    } else {
+        document.getElementById('host-reveal-actions').style.display = 'none';
+    }
     showScreen(revealScreen);
-    revealScreen.classList.remove('in-state', 'out-state');
-    
-    if (gameState.currentPlayerIndex === gameState.outPlayer) {
+}
+
+function showMyRole() {
+    document.getElementById('pre-reveal-content').style.display = 'none';
+    document.getElementById('post-reveal-content').style.display = 'flex';
+    updateRevealUI();
+}
+
+function updateRevealUI() {
+    if(!roomData || !roomData.game) return;
+    if (myPlayerId === roomData.game.outPlayerId) {
+        revealScreen.classList.remove('in-state');
         revealScreen.classList.add('out-state');
         statusTitle.textContent = translations[gameState.lang].you_are_out;
         revealLabel.textContent = translations[gameState.lang].hint_is;
-        revealWord.textContent = gameState.currentHint[gameState.lang];
+        revealWord.textContent = roomData.game.hint[gameState.lang];
     } else {
+        revealScreen.classList.remove('out-state');
         revealScreen.classList.add('in-state');
         statusTitle.textContent = translations[gameState.lang].you_are_in;
         revealLabel.textContent = translations[gameState.lang].word_is;
-        revealWord.textContent = gameState.currentWord[gameState.lang];
+        revealWord.textContent = roomData.game.word[gameState.lang];
     }
 }
 
-function handleNextPlayer() {
-    if (gameState.currentPlayerIndex < gameState.playersCount) {
-        gameState.currentPlayerIndex++;
-        updatePassScreenText();
-        showScreen(passScreen);
-    } else {
-        startQuestioningPhase();
-    }
-}
-
-// ---------------- Questioning Logic ----------------
 function startQuestioningPhase() {
+    if (!isHost) return;
+    
+    const pIds = Object.keys(roomData.players);
+    let asker = pIds[Math.floor(Math.random() * pIds.length)];
+    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    
+    roomRef.update({
+        status: 'questioning',
+        game: {
+            ...roomData.game,
+            askerId: asker,
+            receiverId: receiver
+        }
+    });
+}
+
+// ---------------- Questioning Phase ----------------
+function transitionToQuestioning() {
     showScreen(questioningScreen);
-    generateNextQuestionPair();
-}
-
-function generateNextQuestionPair() {
-    let asker = Math.floor(Math.random() * gameState.playersCount) + 1;
-    let receiver = Math.floor(Math.random() * gameState.playersCount) + 1;
     
-    while (asker === receiver) {
-        receiver = Math.floor(Math.random() * gameState.playersCount) + 1;
-    }
-    
-    const playerText = translations[gameState.lang].player;
-    qAsker.textContent = `${playerText} ${asker}`;
-    qReceiver.textContent = `${playerText} ${receiver}`;
-}
-
-// ---------------- Voting Logic ----------------
-function startVotingPhase() {
-    gameState.currentVoterIndex = 1;
-    gameState.votes = {};
-    showVoterTurn();
-}
-
-function showVoterTurn() {
-    gameState.selectedVote = null;
-    confirmVoteBtn.disabled = true;
-    
-    votingGrid.innerHTML = '';
-    const playerText = translations[gameState.lang].player;
-    
-    const subtitle = document.querySelector('#voting-screen p');
-    if (gameState.lang === 'ar') {
-        subtitle.textContent = `${playerText} ${gameState.currentVoterIndex}، صوّت لمين برا السالفة`;
+    if (isHost) {
+        document.getElementById('host-questioning-actions').style.display = 'flex';
+        document.getElementById('guest-questioning-actions').style.display = 'none';
     } else {
-        subtitle.textContent = `${playerText} ${gameState.currentVoterIndex}, vote who is OUT`;
+        document.getElementById('host-questioning-actions').style.display = 'none';
+        document.getElementById('guest-questioning-actions').style.display = 'flex';
     }
     
-    for (let i = 1; i <= gameState.playersCount; i++) {
-        if (i === gameState.currentVoterIndex) continue; // Can't vote for yourself
+    updateQuestioningUI();
+}
+
+function updateQuestioningUI() {
+    if (!roomData || !roomData.game || !roomData.game.askerId) return;
+    const askerName = roomData.players[roomData.game.askerId] ? roomData.players[roomData.game.askerId].name : "Unknown";
+    const receiverName = roomData.players[roomData.game.receiverId] ? roomData.players[roomData.game.receiverId].name : "Unknown";
+    
+    qAsker.textContent = askerName;
+    qReceiver.textContent = receiverName;
+}
+
+function nextQuestionPair() {
+    if(!isHost) return;
+    const pIds = Object.keys(roomData.players);
+    let asker = pIds[Math.floor(Math.random() * pIds.length)];
+    let receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    while(asker === receiver) receiver = pIds[Math.floor(Math.random() * pIds.length)];
+    
+    roomRef.child('game').update({
+        askerId: asker,
+        receiverId: receiver
+    });
+}
+
+function startVotingPhase() {
+    if(!isHost) return;
+    roomRef.update({
+        status: 'voting',
+        votes: {}
+    });
+}
+
+// ---------------- Voting Phase ----------------
+function transitionToVoting() {
+    showScreen(votingScreen);
+    selectedVoteId = null;
+    
+    if (isHost) {
+        document.getElementById('host-voting-actions').style.display = 'flex';
+    } else {
+        document.getElementById('host-voting-actions').style.display = 'none';
+    }
+    
+    renderVotingGrid();
+    updateVotingRealtime();
+}
+
+function renderVotingGrid() {
+    votingGrid.innerHTML = '';
+    
+    Object.keys(roomData.players).forEach(pId => {
+        if (pId === myPlayerId) return; // Can't vote for self
         
         const div = document.createElement('div');
         div.className = 'vote-card';
-        div.textContent = `${playerText} ${i}`;
-        div.onclick = () => selectVote(i, div);
+        div.id = 'vote-card-' + pId;
+        div.innerHTML = `<span>${roomData.players[pId].name}</span>`;
+        div.onclick = () => {
+            selectedVoteId = pId;
+            document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
+            div.classList.add('selected');
+            
+            // Push vote to firebase
+            roomRef.child('votes/' + myPlayerId).set(pId);
+        };
         votingGrid.appendChild(div);
-    }
-    
-    showScreen(votingScreen);
+    });
 }
 
-function selectVote(playerIndex, element) {
-    gameState.selectedVote = playerIndex;
+function updateVotingRealtime() {
+    if (!roomData || roomData.status !== 'voting') return;
+    const votes = roomData.votes || {};
+    const totalVotes = Object.keys(votes).length;
+    const expectedVotes = Object.keys(roomData.players).length; 
     
-    // Update UI
-    document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
-    element.classList.add('selected');
+    votingStatusText.textContent = `${totalVotes} / ${expectedVotes} voted`;
     
-    confirmVoteBtn.disabled = false;
-}
-
-function confirmVoteEntry() {
-    gameState.votes[gameState.currentVoterIndex] = gameState.selectedVote;
+    // Clear all counters
+    document.querySelectorAll('.vote-count-badge').forEach(b => b.remove());
     
-    if (gameState.currentVoterIndex < gameState.playersCount) {
-        gameState.currentVoterIndex++;
-        showVoterTurn();
-    } else {
-        verifyFinalVotes();
-    }
-}
-
-function verifyFinalVotes() {
-    const counts = {};
-    let maxVotes = 0;
-    let mostVotedPlayer = -1;
+    // Tally votes
+    const voteCounts = {};
+    Object.values(votes).forEach(votedId => {
+        voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+    });
     
-    Object.values(gameState.votes).forEach(votedId => {
-        counts[votedId] = (counts[votedId] || 0) + 1;
-        if (counts[votedId] > maxVotes) {
-            maxVotes = counts[votedId];
-            mostVotedPlayer = votedId;
+    // Display counts
+    Object.keys(voteCounts).forEach(pId => {
+        const card = document.getElementById('vote-card-' + pId);
+        if (card) {
+            let badge = document.createElement('span');
+            badge.className = 'vote-count-badge';
+            badge.textContent = voteCounts[pId];
+            card.appendChild(badge);
         }
     });
 
-    const playerText = translations[gameState.lang].player;
-    resultOutPlayer.textContent = `${playerText} ${gameState.outPlayer}`;
-    resultWord.textContent = gameState.currentWord[gameState.lang];
+    // Keep my selection highlighted
+    if (votes[myPlayerId]) {
+        selectedVoteId = votes[myPlayerId];
+        document.querySelectorAll('.vote-card').forEach(el => el.classList.remove('selected'));
+        const myCard = document.getElementById('vote-card-' + selectedVoteId);
+        if (myCard) myCard.classList.add('selected');
+    }
+}
+
+function endVotingAndShowResults() {
+    if(!isHost) return;
+    roomRef.update({
+         status: 'results'
+    });
+}
+
+// ---------------- Results Phase ----------------
+function transitionToResults() {
+    showScreen(resultsScreen);
+    
+    if (isHost) {
+        document.getElementById('host-results-actions').style.display = 'flex';
+        document.getElementById('guest-results-actions').style.display = 'none';
+    } else {
+        document.getElementById('host-results-actions').style.display = 'none';
+        document.getElementById('guest-results-actions').style.display = 'flex';
+    }
+    
+    const votes = roomData.votes || {};
+    const voteCounts = {};
+    let maxVotes = 0;
+    let mostVotedId = null;
+    
+    Object.values(votes).forEach(votedId => {
+        voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+        if (voteCounts[votedId] > maxVotes) {
+            maxVotes = voteCounts[votedId];
+            mostVotedId = votedId;
+        }
+    });
+    
+    const outPId = roomData.game.outPlayerId;
+    const outName = roomData.players[outPId] ? roomData.players[outPId].name : "Unknown";
+    resultOutPlayer.textContent = outName;
+    resultWord.textContent = roomData.game.word[gameState.lang];
     
     voteResultMsg.classList.remove('vote-correct', 'vote-wrong');
-    if (mostVotedPlayer === gameState.outPlayer) {
+    if (mostVotedId === outPId) {
         voteResultMsg.textContent = translations[gameState.lang].correct_guess;
         voteResultMsg.classList.add('vote-correct');
     } else {
         voteResultMsg.textContent = translations[gameState.lang].wrong_guess;
         voteResultMsg.classList.add('vote-wrong');
     }
-    
-    showScreen(resultsScreen);
+}
+
+function resetToLobby() {
+    if(!isHost) return;
+    roomRef.update({
+        status: 'lobby',
+        game: null,
+        votes: null
+    }).then(() => {
+        showScreen(lobbyScreen);
+    });
 }
 
 // ---------------- Event Listeners ----------------
@@ -366,34 +612,42 @@ function attachEventListeners() {
         });
     });
 
-    // Navigation
-    playBtn.addEventListener('click', () => showScreen(setupScreen));
+    // Navigation Home
+    btnCreateRoom.addEventListener('click', () => showScreen(createRoomScreen));
+    btnJoinRoom.addEventListener('click', () => showScreen(joinRoomScreen));
     
     backBtns.forEach(btn => {
-        btn.addEventListener('click', () => showScreen(homeScreen));
+        btn.addEventListener('click', () => {
+            if(btn.id !== 'lobby-back-btn') {
+                showScreen(homeScreen);
+            }
+        });
     });
 
     goHomeBtns.forEach(btn => {
-        btn.addEventListener('click', () => showScreen(homeScreen));
+        btn.addEventListener('click', leaveRoom);
     });
 
-    playAgainBtn.addEventListener('click', () => showScreen(setupScreen));
-
-    // Setup Setup
-    decreaseBtn.addEventListener('click', () => updatePlayersCount(-1));
-    increaseBtn.addEventListener('click', () => updatePlayersCount(1));
-    startGameBtn.addEventListener('click', startGame);
-
+    // Room Actions
+    createBtn.addEventListener('click', createRoom);
+    joinBtn.addEventListener('click', joinRoom);
+    lobbyLeaveBtn.addEventListener('click', leaveRoom);
+    document.getElementById('lobby-back-btn').addEventListener('click', leaveRoom);
+    lobbyStartBtn.addEventListener('click', startGameMultiplayer);
+    
     // Gameplay flow
-    revealBtn.addEventListener('click', showReveal);
-    nextPlayerBtn.addEventListener('click', handleNextPlayer);
+    revealBtn.addEventListener('click', showMyRole);
+    toQuestioningBtn.addEventListener('click', startQuestioningPhase);
 
     // Questioning
-    nextQuestionBtn.addEventListener('click', generateNextQuestionPair);
+    nextQuestionBtn.addEventListener('click', nextQuestionPair);
     toVotingBtn.addEventListener('click', startVotingPhase);
 
     // Voting
-    confirmVoteBtn.addEventListener('click', confirmVoteEntry);
+    endVotingBtn.addEventListener('click', endVotingAndShowResults);
+    
+    // Results
+    playAgainBtn.addEventListener('click', resetToLobby);
 }
 
 // Boot up

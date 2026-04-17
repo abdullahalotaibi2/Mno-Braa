@@ -301,7 +301,65 @@ body {
     font-size: 16px;
 }
 
-/* Counter */
+/* Inputs */
+.input-field {
+    width: 100%;
+    padding: 16px;
+    border-radius: var(--border-radius-md);
+    border: 2px solid var(--border-color);
+    background-color: var(--bg-surface);
+    color: var(--text-main);
+    font-size: 18px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.input-field:focus {
+    border-color: var(--primary);
+}
+
+/* Players List */
+.players-list {
+    width: 100%;
+    max-width: 340px;
+    background-color: var(--bg-surface);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+.player-item {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+.player-item:last-child {
+    border-bottom: none;
+}
+.host-badge {
+    background-color: var(--primary);
+    color: white;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+.vote-count-badge {
+    background-color: var(--out-color);
+    color: white;
+    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+}
+[dir="rtl"] .vote-count-badge {
+    margin-left: 0; margin-right: 8px;
+}
+
+/* Base Counter Elements */
 .counter-control {
     display: flex;
     align-items: center;

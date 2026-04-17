@@ -27,30 +27,29 @@
                 <h1 class="main-title" data-i18n="app_title">Who's<br>Out?</h1>
             </div>
             
-            <div class="action-container">
-                <button id="play-btn" class="btn btn-primary btn-large">
-                    <span data-i18n="play">Play</span>
+            <div class="action-container flex-col">
+                <button id="create-room-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="create_room">Create Room</span>
+                </button>
+                <button id="join-room-btn" class="btn btn-secondary btn-large">
+                    <span data-i18n="join_room">Join Room</span>
                 </button>
             </div>
         </section>
 
-        <!-- Setup Screen -->
-        <section id="setup-screen" class="screen">
+        <!-- Create Room Screen -->
+        <section id="create-room-screen" class="screen">
             <div class="header-with-back">
                 <button class="icon-btn back-btn" aria-label="Back">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path></svg>
                 </button>
-                <h2 data-i18n="setup_title">Game Setup</h2>
+                <h2 data-i18n="create_room">Create Room</h2>
             </div>
             
             <div class="setup-container">
                 <div class="form-group">
-                    <label data-i18n="num_players">Number of Players</label>
-                    <div class="counter-control">
-                        <button id="decrease-players" class="counter-btn">-</button>
-                        <span id="players-count-display" class="counter-value">4</span>
-                        <button id="increase-players" class="counter-btn">+</button>
-                    </div>
+                    <label data-i18n="your_name">Your Name</label>
+                    <input type="text" id="host-name-input" class="input-field" placeholder="Enter name">
                 </div>
 
                 <div class="form-group">
@@ -62,25 +61,61 @@
             </div>
 
             <div class="action-container bottom">
-                <button id="start-game-btn" class="btn btn-primary btn-large" disabled>
-                    <span data-i18n="start_game">Start Game</span>
+                <button id="create-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="create">Create</span>
                 </button>
             </div>
         </section>
 
-        <!-- Pass Phone Screen -->
-        <section id="pass-screen" class="screen">
-            <div class="center-content">
-                <div class="player-avatar">
-                   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 256 256"><path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z" opacity="0.2"></path><path d="M128,152a72,72,0,1,0-72-72A72.08,72.08,0,0,0,128,152Zm0-128a56,56,0,1,1-56,56A56.06,56.06,0,0,1,128,24Zm84.62,180.81A24.12,24.12,0,0,0,208,200H48a24.12,24.12,0,0,0-4.62,4.81,8,8,0,1,1-12.76-9.62c16-21.23,38.56-37.49,64.21-46.34a71.91,71.91,0,0,0,66.34,0c25.65,8.85,48.19,25.11,64.21,46.34A8,8,0,1,1,212.62,204.81Z"></path></svg>
+        <!-- Join Room Screen -->
+        <section id="join-room-screen" class="screen">
+            <div class="header-with-back">
+                <button class="icon-btn back-btn" aria-label="Back">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path></svg>
+                </button>
+                <h2 data-i18n="join_room">Join Room</h2>
+            </div>
+            
+            <div class="setup-container">
+                <div class="form-group">
+                    <label data-i18n="room_code">Room Code</label>
+                    <input type="text" id="room-code-input" class="input-field text-center" placeholder="----" maxlength="4" style="font-size: 24px; letter-spacing: 4px;">
                 </div>
-                <h2 data-i18n="pass_to">Pass to</h2>
-                <h1 id="pass-player-name" class="highlight-text">Player 1</h1>
+                <div class="form-group">
+                    <label data-i18n="your_name">Your Name</label>
+                    <input type="text" id="guest-name-input" class="input-field" placeholder="Enter name">
+                </div>
+            </div>
+
+            <div class="action-container bottom">
+                <button id="join-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="join">Join</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Lobby Screen -->
+        <section id="lobby-screen" class="screen">
+            <div class="header-with-back">
+                <h2 data-i18n="lobby" style="margin-left:0; text-align:center; width:100%;">Lobby</h2>
+            </div>
+            
+            <div class="center-content">
+                <h3 data-i18n="room_code_is" class="subtitle">Room Code:</h3>
+                <h1 id="lobby-room-code" class="highlight-text" style="letter-spacing: 8px;">----</h1>
+                
+                <h3 data-i18n="players" class="mt-4 mb-3">Players (<span id="lobby-count">0</span>)</h3>
+                <div class="players-list" id="lobby-players-list">
+                    <!-- Players injected here -->
+                </div>
             </div>
             
             <div class="action-container bottom">
-                <button id="reveal-btn" class="btn btn-primary btn-large">
-                    <span data-i18n="reveal">Reveal</span>
+                <button id="lobby-start-btn" class="btn btn-primary btn-large" style="display: none;">
+                    <span data-i18n="start_game">Start Game</span>
+                </button>
+                <button id="lobby-leave-btn" class="btn btn-secondary btn-large" style="margin-top: 10px;">
+                    <span data-i18n="leave_room">Leave Room</span>
                 </button>
             </div>
         </section>
@@ -88,17 +123,26 @@
         <!-- Reveal Screen -->
         <section id="reveal-screen" class="screen full-color">
             <div class="center-content">
-                <h1 id="status-title" class="status-text">You are IN</h1>
+                <div id="pre-reveal-content">
+                    <h2 class="status-text mb-4" data-i18n="role_assigned">Your role is ready!</h2>
+                    <button id="reveal-btn" class="btn btn-primary btn-large" style="background: white; color: var(--primary);">
+                        <span data-i18n="reveal">Reveal</span>
+                    </button>
+                </div>
                 
-                <div class="card reveal-card">
-                    <div id="reveal-label" class="label-text" data-i18n="word_is">The word is:</div>
-                    <div id="reveal-word" class="secret-word">Word</div>
+                <div id="post-reveal-content" style="display: none; align-items:center; flex-direction:column;">
+                    <h1 id="status-title" class="status-text">You are IN</h1>
+                    
+                    <div class="card reveal-card">
+                        <div id="reveal-label" class="label-text" data-i18n="word_is">The word is:</div>
+                        <div id="reveal-word" class="secret-word">Word</div>
+                    </div>
                 </div>
             </div>
             
-            <div class="action-container bottom">
-                <button id="next-player-btn" class="btn btn-secondary btn-large btn-outline">
-                    <span data-i18n="next_player">Next Player</span>
+            <div class="action-container bottom" id="host-reveal-actions" style="display: none;">
+                <button id="to-questioning-btn" class="btn btn-secondary btn-large btn-outline" style="color: white; border-color: white;">
+                    <span data-i18n="start_questioning">Start Questioning Phase</span>
                 </button>
             </div>
         </section>
@@ -109,22 +153,25 @@
                 <h2 class="section-title" data-i18n="questioning_phase">Questioning Phase</h2>
                 
                 <div class="question-box">
-                    <div class="asker" id="q-asker">Player 1</div>
+                    <div class="asker" id="q-asker">-</div>
                     <div class="ask-icon">
                         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" transform="scale(-1, 1) translate(-256, 0)"></path></svg>
                     </div>
                     <div class="action-text" data-i18n="asks">asks</div>
-                    <div class="receiver" id="q-receiver">Player 2</div>
+                    <div class="receiver" id="q-receiver">-</div>
                 </div>
             </div>
             
-            <div class="action-container bottom flex-col">
+            <div class="action-container bottom flex-col" id="host-questioning-actions" style="display: none;">
                 <button id="next-question-btn" class="btn btn-secondary btn-large mb-3">
                     <span data-i18n="next_question">Next Random Pair</span>
                 </button>
                 <button id="to-voting-btn" class="btn btn-primary btn-large">
                     <span data-i18n="start_voting">Start Voting</span>
                 </button>
+            </div>
+            <div class="action-container bottom" id="guest-questioning-actions" style="display: none;">
+                <p data-i18n="waiting_for_host">Waiting for host...</p>
             </div>
         </section>
 
@@ -140,9 +187,12 @@
             </div>
             
             <div class="action-container bottom">
-                <button id="confirm-vote-btn" class="btn btn-primary btn-large" disabled>
-                    <span data-i18n="confirm_vote">Confirm Vote</span>
-                </button>
+                <p id="voting-status-text" class="text-center mb-3" style="color: var(--text-muted);"></p>
+                <div id="host-voting-actions" style="display: none; width:100%; flex-direction:column; align-items:center; gap: 10px;">
+                    <button id="end-voting-btn" class="btn btn-primary btn-large">
+                        <span data-i18n="end_voting_show_results">Show Results</span>
+                    </button>
+                </div>
             </div>
         </section>
 
@@ -153,7 +203,7 @@
                 
                 <h3 data-i18n="out_was">The 'OUT' player was:</h3>
                 <div class="out-player-card mb-4" id="result-out-player">
-                    Player 2
+                    Player
                 </div>
                 
                 <div class="card result-card">
@@ -166,7 +216,7 @@
                 </div>
             </div>
             
-            <div class="action-container bottom flex-col">
+            <div class="action-container bottom flex-col" id="host-results-actions" style="display: none;">
                 <button id="play-again-btn" class="btn btn-primary btn-large mb-3">
                     <span data-i18n="play_again">Play Again</span>
                 </button>
@@ -174,7 +224,13 @@
                     <span data-i18n="home">Home</span>
                 </button>
             </div>
-        </section>
+            <div class="action-container bottom flex-col" id="guest-results-actions" style="display: none;">
+                <p data-i18n="waiting_for_host">Waiting for host...</p>
+                <button class="btn btn-secondary btn-large go-home-btn mt-3">
+                    <span data-i18n="leave_room">Leave Room</span>
+                </button>
+            </div>
+        </section
 
     </main>
 
@@ -205,6 +261,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Firebase App (the core Firebase SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-app-compat.js"></script>
+    <!-- Firebase Realtime Database -->
+    <script src="https://www.gstatic.com/firebasejs/10.9.0/firebase-database-compat.js"></script>
 
     <!-- Scripts -->
     <script src="data.js"></script>

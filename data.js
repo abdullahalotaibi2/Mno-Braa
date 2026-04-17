@@ -174,7 +174,22 @@ const translations = {
         play_again: "Play Again",
         home: "Home",
         correct_guess: "You got it! The out player was caught.",
-        wrong_guess: "Wrong guess! The out player wins."
+        wrong_guess: "Wrong guess! The out player wins.",
+        create_room: "Create Room",
+        join_room: "Join Room",
+        your_name: "Your Name",
+        create: "Create",
+        room_code: "Room Code",
+        join: "Join",
+        lobby: "Lobby",
+        room_code_is: "Room Code:",
+        players: "Players",
+        leave_room: "Leave Room",
+        role_assigned: "Your role is ready!",
+        start_questioning: "Start Questioning Phase",
+        waiting_for_host: "Waiting for host...",
+        end_voting_show_results: "End Voting & Show Results",
+        voted_for: "Voted for"
     },
     ar: {
         app_title: "منو<br>برا السالفة؟",
@@ -210,6 +225,21 @@ const translations = {
         play_again: "العب مرة أخرى",
         home: "الرئيسية",
         correct_guess: "صحيح! تم صيد اللي برا السالفة.",
-        wrong_guess: "غلط! فاز اللي برا السالفة."
+        wrong_guess: "غلط! فاز اللي برا السالفة.",
+        create_room: "إنشاء غرفة",
+        join_room: "الانضمام لغرفة",
+        your_name: "اسمك",
+        create: "إنشاء",
+        room_code: "رمز الغرفة",
+        join: "انضمام",
+        lobby: "الانتظار",
+        room_code_is: "رمز الغرفة:",
+        players: "اللاعبين",
+        leave_room: "مغادرة الغرفة",
+        role_assigned: "دورك جاهز!",
+        start_questioning: "بدء فترة الأسئلة",
+        waiting_for_host: "بانتظار الهوست...",
+        end_voting_show_results: "إنهاء التصويت وعرض النتائج",
+        voted_for: "صوت لـ"
     }
 };
