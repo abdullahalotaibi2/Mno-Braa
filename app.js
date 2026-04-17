@@ -30,6 +30,7 @@ let currentRoomCode = null;
 let roomRef = null;
 let isHost = false;
 let roomData = null;
+let targetOnlinePlayers = 4;
 
 // Local Play State
 let localPlayersCount = 4;
@@ -82,6 +83,9 @@ const startLocalGameBtn = document.getElementById('start-local-game-btn');
 // Create Room screen elements
 const categoryGrid = document.getElementById('category-selection');
 const createBtn = document.getElementById('create-btn');
+const onlineCountDisplay = document.getElementById('online-players-count-display');
+const onlineDecreaseBtn = document.getElementById('online-decrease-players');
+const onlineIncreaseBtn = document.getElementById('online-increase-players');
 
 // Join Room screen elements
 const joinBtn = document.getElementById('join-btn');
@@ -346,6 +350,7 @@ function createRoom() {
     roomRef.set({
         status: 'lobby',
         categoryId: gameState.categoryId,
+        targetPlayers: targetOnlinePlayers,
         hostId: myPlayerId,
         players: {
             [myPlayerId]: { name: hostName, isHost: true }
@@ -461,10 +466,11 @@ function updateLobbyUI() {
     });
     
     if (isHost) {
-        if (pKeys.length < 2) {
+        const target = roomData.targetPlayers || 3;
+        if (pKeys.length < target) {
             lobbyStartBtn.style.display = 'inline-flex';
             lobbyStartBtn.disabled = true;
-            lobbyStartBtn.innerHTML = `<span>Waiting for players (${pKeys.length}/2)</span>`;
+            lobbyStartBtn.innerHTML = `<span>Waiting for players (${pKeys.length}/${target})</span>`;
         } else {
             lobbyStartBtn.style.display = 'inline-flex';
             lobbyStartBtn.disabled = false;
@@ -478,7 +484,8 @@ function updateLobbyUI() {
 function startGameMultiplayer() {
     if (!isHost || !roomData) return;
     const pKeys = Object.keys(roomData.players);
-    if (pKeys.length < 2) return; // Allow 2 for testing, but ideally 3
+    const target = roomData.targetPlayers || 3;
+    if (pKeys.length < target) return; 
     
     const cat = gameData.categories[roomData.categoryId];
     const words = cat.words;
@@ -496,6 +503,9 @@ function startGameMultiplayer() {
             outPlayerId: outPlayerId
         },
         votes: {}
+    }).catch(err => {
+        alert("Error starting game! " + err.message);
+        console.error(err);
     });
 }
 
@@ -744,6 +754,14 @@ function resetToLobby() {
 }
 
 // ---------------- Event Listeners ----------------
+function updateOnlinePlayersCount(change) {
+    let newCount = targetOnlinePlayers + change;
+    if (newCount >= 2 && newCount <= 20) {
+        targetOnlinePlayers = newCount;
+        onlineCountDisplay.textContent = newCount;
+    }
+}
+
 function attachEventListeners() {
     settingsBtn.addEventListener('click', () => modal.classList.add('active'));
     closeSettingsBtn.addEventListener('click', () => modal.classList.remove('active'));
@@ -790,6 +808,9 @@ function attachEventListeners() {
     localPlayAgainBtn.addEventListener('click', () => showScreen(setupScreen));
 
     // Multi Logic binds
+    onlineDecreaseBtn.addEventListener('click', () => updateOnlinePlayersCount(-1));
+    onlineIncreaseBtn.addEventListener('click', () => updateOnlinePlayersCount(1));
+    
     createBtn.addEventListener('click', createRoom);
     joinBtn.addEventListener('click', joinRoom);
     lobbyLeaveBtn.addEventListener('click', leaveRoom);
