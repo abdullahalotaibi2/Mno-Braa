@@ -253,6 +253,8 @@ function startLocalGame() {
 function showPassScreenLocal() {
     updateTranslations();
     showScreen(passScreen);
+    const playerText = translations[gameState.lang].player || "Player";
+    passPlayerName.textContent = `${playerText} ${currentPlayerIndex}`;
 }
 
 function showLocalReveal() {
@@ -814,7 +816,8 @@ function attachEventListeners() {
     createBtn.addEventListener('click', createRoom);
     joinBtn.addEventListener('click', joinRoom);
     lobbyLeaveBtn.addEventListener('click', leaveRoom);
-    document.getElementById('lobby-back-btn').addEventListener('click', leaveRoom);
+    const lobbyBackBtn = document.getElementById('lobby-back-btn');
+    if (lobbyBackBtn) lobbyBackBtn.addEventListener('click', leaveRoom);
     lobbyStartBtn.addEventListener('click', startGameMultiplayer);
     revealBtn.addEventListener('click', showMyRole);
     endVotingBtn.addEventListener('click', () => { if(isHost) roomRef.update({status: 'results'}); });
