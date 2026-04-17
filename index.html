@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Who's Out? - منو برا السالفة</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#121212">
+</head>
+<body class="dark-mode" id="body">
+    
+    <!-- Top Bar with Settings -->
+    <header class="app-header">
+        <div class="logo"></div>
+        <button id="settings-btn" class="icon-btn" aria-label="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm88-29.84q.06-2.16,0-4.32l14.92-18.64a8,8,0,0,0,1.48-7.06,107.21,107.21,0,0,0-10.88-26.25,8,8,0,0,0-6-3.93l-23.72-2.64q-1.48-1.56-3-3L186,40.54a8,8,0,0,0-3.94-6,107.71,107.71,0,0,0-26.25-10.87,8,8,0,0,0-7.06,1.49L130.16,40Q128,40,125.84,40L107.2,25.11a8,8,0,0,0-7.06-1.48A107.6,107.6,0,0,0,73.89,34.51a8,8,0,0,0-3.93,6L67.32,64.27q-1.56,1.49-3,3L40.54,70a8,8,0,0,0-6,3.94,107.71,107.71,0,0,0-10.87,26.25,8,8,0,0,0,1.49,7.06L40,125.84Q40,128,40,130.16L25.11,148.8a8,8,0,0,0-1.48,7.06,107.21,107.21,0,0,0,10.88,26.25,8,8,0,0,0,6,3.93l23.72,2.64q1.49,1.56,3,3L70,215.46a8,8,0,0,0,3.94,6,107.71,107.71,0,0,0,26.25,10.87,8,8,0,0,0,7.06-1.49L125.84,216q2.16.06,4.32,0l18.64,14.92a8,8,0,0,0,7.06,1.48,107.21,107.21,0,0,0,26.25-10.88,8,8,0,0,0,3.93-6l2.64-23.72q1.56-1.48,3-3L215.46,186a8,8,0,0,0,6-3.94,107.71,107.71,0,0,0,10.87-26.25,8,8,0,0,0-1.49-7.06Zm-16.1-6.5a73.93,73.93,0,0,1,0,8.68,8,8,0,0,0,1.74,5.48l14.19,17.73a91.57,91.57,0,0,1-6.23,15L194.43,158a8,8,0,0,0-6.57,2.71,74.36,74.36,0,0,1-6.13,6.13,8,8,0,0,0-2.71,6.57l2.46,22.22a91.57,91.57,0,0,1-15,6.23l-17.73-14.19a8,8,0,0,0-5.48-1.74,73.93,73.93,0,0,1-8.68,0,8,8,0,0,0-5.48,1.74L111.45,205.6a91.57,91.57,0,0,1-15-6.23L99,177.15a8,8,0,0,0-2.71-6.57,74.36,74.36,0,0,1-6.13-6.13,8,8,0,0,0-6.57-2.71L61.35,164.2a92,92,0,0,1-6.23-15L69.31,131.5a8,8,0,0,0,1.74-5.48,73.93,73.93,0,0,1,0-8.68,8,8,0,0,0-1.74-5.48L55.12,94.13a91.57,91.57,0,0,1,6.23-15L83.57,81.6A8,8,0,0,0,90.14,78.9a74.36,74.36,0,0,1,6.13-6.13,8,8,0,0,0,2.71-6.57L96.52,44a91.57,91.57,0,0,1,15-6.23l17.73,14.19a8,8,0,0,0,5.48,1.74,73.93,73.93,0,0,1,8.68,0,8,8,0,0,0,5.48-1.74l14.19-17.73a91.57,91.57,0,0,1,15,6.23L175.6,64.27a8,8,0,0,0,2.71,6.57,74.36,74.36,0,0,1,6.13,6.13,8,8,0,0,0,6.57,2.71l22.22-2.46a92,92,0,0,1,6.23,15l-14.19,17.73A8,8,0,0,0,199.9,123.66Z"></path></svg>
+        </button>
+    </header>
+
+    <!-- Main App Container -->
+    <main id="app-container">
+
+        <!-- Home Screen -->
+        <section id="home-screen" class="screen active">
+            <div class="hero-content">
+                <h1 class="main-title" data-i18n="app_title">Who's<br>Out?</h1>
+            </div>
+            
+            <div class="action-container">
+                <button id="play-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="play">Play</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Setup Screen -->
+        <section id="setup-screen" class="screen">
+            <div class="header-with-back">
+                <button class="icon-btn back-btn" aria-label="Back">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"></path></svg>
+                </button>
+                <h2 data-i18n="setup_title">Game Setup</h2>
+            </div>
+            
+            <div class="setup-container">
+                <div class="form-group">
+                    <label data-i18n="num_players">Number of Players</label>
+                    <div class="counter-control">
+                        <button id="decrease-players" class="counter-btn">-</button>
+                        <span id="players-count-display" class="counter-value">4</span>
+                        <button id="increase-players" class="counter-btn">+</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label data-i18n="category">Category</label>
+                    <div id="category-selection" class="category-grid">
+                        <!-- Categories injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-container bottom">
+                <button id="start-game-btn" class="btn btn-primary btn-large" disabled>
+                    <span data-i18n="start_game">Start Game</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pass Phone Screen -->
+        <section id="pass-screen" class="screen">
+            <div class="center-content">
+                <div class="player-avatar">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 256 256"><path d="M230.93,220a8,8,0,0,1-6.93,4H32a8,8,0,0,1-6.92-12c15.23-26.33,38.7-45.21,66.09-54.16a72,72,0,1,1,73.66,0c27.39,8.95,50.86,27.83,66.09,54.16A8,8,0,0,1,230.93,220Z" opacity="0.2"></path><path d="M128,152a72,72,0,1,0-72-72A72.08,72.08,0,0,0,128,152Zm0-128a56,56,0,1,1-56,56A56.06,56.06,0,0,1,128,24Zm84.62,180.81A24.12,24.12,0,0,0,208,200H48a24.12,24.12,0,0,0-4.62,4.81,8,8,0,1,1-12.76-9.62c16-21.23,38.56-37.49,64.21-46.34a71.91,71.91,0,0,0,66.34,0c25.65,8.85,48.19,25.11,64.21,46.34A8,8,0,1,1,212.62,204.81Z"></path></svg>
+                </div>
+                <h2 data-i18n="pass_to">Pass to</h2>
+                <h1 id="pass-player-name" class="highlight-text">Player 1</h1>
+            </div>
+            
+            <div class="action-container bottom">
+                <button id="reveal-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="reveal">Reveal</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Reveal Screen -->
+        <section id="reveal-screen" class="screen full-color">
+            <div class="center-content">
+                <h1 id="status-title" class="status-text">You are IN</h1>
+                
+                <div class="card reveal-card">
+                    <div id="reveal-label" class="label-text" data-i18n="word_is">The word is:</div>
+                    <div id="reveal-word" class="secret-word">Word</div>
+                </div>
+            </div>
+            
+            <div class="action-container bottom">
+                <button id="next-player-btn" class="btn btn-secondary btn-large btn-outline">
+                    <span data-i18n="next_player">Next Player</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Questioning Screen -->
+        <section id="questioning-screen" class="screen">
+            <div class="center-content text-center">
+                <h2 class="section-title" data-i18n="questioning_phase">Questioning Phase</h2>
+                
+                <div class="question-box">
+                    <div class="asker" id="q-asker">Player 1</div>
+                    <div class="ask-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 256 256"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z" transform="scale(-1, 1) translate(-256, 0)"></path></svg>
+                    </div>
+                    <div class="action-text" data-i18n="asks">asks</div>
+                    <div class="receiver" id="q-receiver">Player 2</div>
+                </div>
+            </div>
+            
+            <div class="action-container bottom flex-col">
+                <button id="next-question-btn" class="btn btn-secondary btn-large mb-3">
+                    <span data-i18n="next_question">Next Random Pair</span>
+                </button>
+                <button id="to-voting-btn" class="btn btn-primary btn-large">
+                    <span data-i18n="start_voting">Start Voting</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Voting Screen -->
+        <section id="voting-screen" class="screen">
+            <div class="header-container text-center">
+                <h2 data-i18n="voting_phase">Voting Phase</h2>
+                <p data-i18n="vote_out">Vote who is OUT</p>
+            </div>
+            
+            <div class="voting-grid" id="voting-grid">
+                <!-- Players injected dynamically -->
+            </div>
+            
+            <div class="action-container bottom">
+                <button id="confirm-vote-btn" class="btn btn-primary btn-large" disabled>
+                    <span data-i18n="confirm_vote">Confirm Vote</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Screen -->
+        <section id="results-screen" class="screen">
+            <div class="center-content text-center">
+                <h2 class="section-title mb-4" data-i18n="results">Results</h2>
+                
+                <h3 data-i18n="out_was">The 'OUT' player was:</h3>
+                <div class="out-player-card mb-4" id="result-out-player">
+                    Player 2
+                </div>
+                
+                <div class="card result-card">
+                    <div class="label-text mb-2" data-i18n="word_was">The word was:</div>
+                    <div class="secret-word" id="result-word">Word</div>
+                </div>
+
+                <div id="vote-result-msg" class="vote-result-msg mt-4">
+                    <!-- Correct or Incorrect message -->
+                </div>
+            </div>
+            
+            <div class="action-container bottom flex-col">
+                <button id="play-again-btn" class="btn btn-primary btn-large mb-3">
+                    <span data-i18n="play_again">Play Again</span>
+                </button>
+                <button class="btn btn-secondary btn-large go-home-btn">
+                    <span data-i18n="home">Home</span>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-i18n="settings">Settings</h2>
+                <button id="close-settings" class="icon-btn" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 256 256"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+                </button>
+            </div>
+            
+            <div class="settings-group">
+                <h3 data-i18n="language">Language</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" data-lang="en">English</button>
+                    <button class="toggle-btn" data-lang="ar">العربية</button>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3 data-i18n="theme">Theme</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn" data-theme="light" data-i18n="light">Light</button>
+                    <button class="toggle-btn active" data-theme="dark" data-i18n="dark">Dark</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
