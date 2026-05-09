@@ -190,7 +190,8 @@ const translations = {
         start_questioning: "Start Questioning Phase",
         waiting_for_host: "Waiting for host...",
         end_voting_show_results: "End Voting & Show Results",
-        voted_for: "Voted for"
+        voted_for: "Voted for",
+        copyright: "© 2026 Abdullah Al-Otaibi"
     },
     ar: {
         app_title: "منو<br>برا السالفة؟",
@@ -242,6 +243,7 @@ const translations = {
         start_questioning: "بدء فترة الأسئلة",
         waiting_for_host: "بانتظار الهوست...",
         end_voting_show_results: "إنهاء التصويت وعرض النتائج",
-        voted_for: "صوت لـ"
+        voted_for: "صوت لـ",
+        copyright: "© 2026 عبدالله العتيبي"
     }
 };

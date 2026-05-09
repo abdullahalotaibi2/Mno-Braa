@@ -264,6 +264,22 @@ body {
     justify-content: center;
 }
 
+.copyright-wrapper {
+    margin-top: auto;
+    padding-top: 40px;
+    padding-bottom: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.copyright-text {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 0.5px;
+}
+
 /* Setup Screen */
 .header-with-back {
     display: flex;
